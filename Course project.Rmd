@@ -1,0 +1,107 @@
+---
+title: "Course Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Practical machine learning
+##### *Daniel Montemayor*
+
+### Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+### Data
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+### Code
+
+First, we need to load the caret package:
+```{r}
+library(caret)
+```
+
+#### Reading the data
+
+Then we read the data downloaded and stored in our working directory.
+We also need to identify any NA values:
+```{r}
+training <- read.csv("pml-training.csv", na.strings = c("NA", "#DIV/0!", ""))
+testing <- read.csv("pml-testing.csv", na.strings = c("NA", "#DIV/0!", ""))
+```
+
+The original data sets have 160 variables:
+```{r}
+dim(training)
+dim(testing)
+```
+
+#### Cleaning data
+
+Removing NA cases to have tidier data:
+```{r}
+complete <- complete.cases(t(training)) & complete.cases(t(testing))
+training <- training[,complete]
+testing <- testing[,complete]
+```
+
+Remove columns 1 through 7 (except 2) since they are variables that are not necessary for prediction purposes:
+```{r}
+training <- training[, -c(1,3,4,5,6,7)]
+testing <- testing[, -c(1,3,4,5,6,7)]
+```
+
+#### Data split for cross-validation
+
+Data split with training at 60% and validation at 40%.
+The number of variables goes down to 54:
+```{r}
+set.seed(123)
+inTrain <- createDataPartition(training$classe, p = 0.6, list = FALSE)
+training <- training[inTrain,]
+validation <- training[-inTrain,]
+dim(training)
+dim(validation)
+```
+
+#### Model for data classification
+
+Model fit using Random Forest algorithm for classification:
+```{r}
+modFit <- train(classe ~ ., data = training, method = "rf")
+modFit
+modFit$finalModel
+```
+
+#### Results
+
+Training data set prediction and accuracy:
+```{r}
+pred_train <- predict(modFit, training)
+train_accuracy <- sum(pred_train == training$classe) / length(pred_train)
+paste("Accuracy on training data set =", train_accuracy)
+```
+
+Validation data set prediction and accuracy:
+```{r}
+pred_val <- predict(modFit, newdata = validation)
+val_accuracy <- sum(pred_val == validation$classe) / length(pred_val)
+paste("Accuracy on validation data set =", val_accuracy)
+```
+
+Testing data set prediction and final results:
+```{r}
+pred_test <- predict(modFit, newdata = testing)
+paste("Testing data set classifications =")
+pred_test
+```
